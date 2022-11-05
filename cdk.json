@@ -20,6 +20,7 @@
     "githubRepositoryName": "codepipeline-triggered-by-github-releases",
     "githubBranchName": "main",
     "githubTokenName": "github-sample-token",
+    "webhookSecretTokenName": "webhook-sample-secret-token",
     "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,
     "@aws-cdk/core:stackRelativeExports": true,
     "@aws-cdk/aws-rds:lowercaseDbIdentifier": true,

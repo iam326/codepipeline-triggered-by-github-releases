@@ -11,6 +11,7 @@ export interface CodepipelineTriggeredByGithubReleaseStackProps
   githubRepositoryName: string;
   githubBranchName: string;
   githubTokenName: string;
+  webhookSecretTokenName: string;
 }
 
 export class CodepipelineTriggeredByGithubReleasesStack extends cdk.Stack {
@@ -27,10 +28,14 @@ export class CodepipelineTriggeredByGithubReleasesStack extends cdk.Stack {
       githubRepositoryName,
       githubBranchName,
       githubTokenName,
+      webhookSecretTokenName,
     } = props;
 
     const githubToken =
       cdk.SecretValue.secretsManager(githubTokenName).unsafeUnwrap();
+    const webhookSecretToken = cdk.SecretValue.secretsManager(
+      webhookSecretTokenName
+    ).unsafeUnwrap();
 
     const sourceArtifact = new codePipeline.Artifact();
 
@@ -50,6 +55,8 @@ export class CodepipelineTriggeredByGithubReleasesStack extends cdk.Stack {
       branch: githubBranchName,
       oauthToken: new cdk.SecretValue(githubToken),
       output: sourceArtifact,
+      // デフォルトのトリガーを外す
+      trigger: codePipelineActions.GitHubTrigger.NONE,
     });
 
     const deployAction = new codePipelineActions.CodeBuildAction({
@@ -70,6 +77,24 @@ export class CodepipelineTriggeredByGithubReleasesStack extends cdk.Stack {
           actions: [deployAction],
         },
       ],
+    });
+
+    new codePipeline.CfnWebhook(this, 'WebhookResource', {
+      authentication: 'GITHUB_HMAC',
+      authenticationConfiguration: {
+        secretToken: webhookSecretToken,
+      },
+      // GitHub でリリースされたことをトリガーとする
+      filters: [
+        {
+          jsonPath: '$.action',
+          matchEquals: 'published',
+        },
+      ],
+      targetAction: sourceAction.actionProperties.actionName,
+      targetPipeline: deployPipeline.pipelineName,
+      targetPipelineVersion: 1,
+      registerWithThirdParty: true,
     });
   }
 }
